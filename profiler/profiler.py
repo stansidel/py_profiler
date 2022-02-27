@@ -1,8 +1,9 @@
-from dataclasses import dataclass
+#! /usr/bin/env python
+# -*- coding: utf-8 -*-
+
 from datetime import datetime, timedelta
 from multiprocessing import Event
-from typing import Optional
-import statistics
+import numpy
 import uuid
 
 
@@ -30,26 +31,24 @@ class Profiler:
     runs of alike events.
     """
 
-    @dataclass
+
     class Event:
         """An event tracked with `Profiler`.
         
         When the event hasn't finished, it has its `end_time` and `duration` set to `None`."""
 
-        name: str
-        start_time: datetime
-        end_time: Optional[datetime] = None
-        duration: Optional[int] = None
+        def __init__(self, name, start_time, end_time=None, duration=None):
+            self.name = name
+            self.start_time = start_time
+            self.end_time = end_time
+            self.duration = duration
 
-
-    __running_events: 'dict[uuid.UUID, Profiler.Event]'
-    __finished_events: 'dict[str, list[Profiler.Event]]'
 
     def __init__(self):
         self.__running_events = {}
         self.__finished_events = {}
 
-    def start(self, event: str) -> uuid.UUID:
+    def start(self, event):
         """Starts tracking a new event with name `name`.
         
         Used `stop(uid=uid)` with the returned value of `start` for `uid`
@@ -59,7 +58,7 @@ class Profiler:
         self.__running_events[id] = event
         return id
     
-    def stop(self, uid: uuid.UUID) -> Optional[Event]:
+    def stop(self, uid):
         """Tracks completion of the event with the `uid` specified.
         
         You get the `uid` of the event as the return value from the `start` function."""
@@ -74,12 +73,12 @@ class Profiler:
         return event
     
     @property
-    def finished_events(self) -> 'dict[str, list[Profiler.Event]]':
+    def finished_events(self):
         """Full list of tracked events grouped by the event name."""
         return self.__finished_events
     
     @property
-    def finished_events_stats(self) -> 'dict[str, dict[str, float]]':
+    def finished_events_stats(self):
         """Statistics for the tracked events.
         
         Keys of the returned dictionary contain names of the events finished so far.
@@ -90,19 +89,19 @@ class Profiler:
         
         For groups with multiple values, the stats dictionary contains basic statistics for the values."""
         
-        result: 'dict[str, dict[str, float]]' = {}
+        result = {}
         for name, events in self.__finished_events.items():
             durations = map(lambda e: e.duration, events)
             result[name] = self.__get_stats_from_array(list(durations))
         return result
     
-    def __save_finished_event(self, event: Event):
+    def __save_finished_event(self, event):
         name = event.name
         if name not in self.__finished_events:
             self.__finished_events[name] = []
         self.__finished_events[name].append(event)
 
-    def __get_stats_from_array(self, values: 'list[int]') -> 'dict[str, float]':
+    def __get_stats_from_array(self, values):
         if len(values) == 0:
             return {}
 
@@ -113,8 +112,8 @@ class Profiler:
             'len': len(values),
             'min': min(values),
             'max': max(values),
-            'mean': statistics.mean(values),
-            'median': statistics.median(values),
-            'stdev': statistics.stdev(values),
-            'variance': statistics.variance(values)
+            'mean': numpy.mean(values),
+            'median': numpy.median(values),
+            'stdev': numpy.std(values),
+            'variance': numpy.var(values)
         }
